@@ -1,0 +1,29 @@
+# -----------------------------------------------------------------------------
+# Git Ignore File for SchedulingSystem Project
+# -----------------------------------------------------------------------------
+# This file specifies intentionally untracked files that Git should ignore.
+
+# --- SECURITY ---
+# Ignore the local configuration file. This is the MOST IMPORTANT rule.
+# It prevents sensitive database credentials from ever being committed to GitHub.
+includes/config.php
+
+# --- DEPENDENCIES ---
+# Ignore the vendor directory, which is standard practice for PHP projects
+# that use Composer for dependency management.
+/vendor/
+
+# --- COMMON SYSTEM FILES ---
+# Ignore operating system-specific files to keep the repository clean.
+.DS_Store
+Thumbs.db
+/node_modules/
+
+# --- LOGS & CACHE ---
+# Ignore log files and cache directories that might be generated.
+*.log
+/logs/
+/cache/
+
+
+This file is configured to provide the best security and cleanliness for your project on GitHub. Just place it in your project's root folder, and Git will automatically know not to track the files and folders listed.
