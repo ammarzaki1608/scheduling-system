@@ -34,12 +34,12 @@ if (!isset($_SESSION['created'])) {
 // --- ROLE-BASED ACCESS CONTROL ---
 $currentFile = $_SERVER['PHP_SELF'];
 
-if (strpos($currentFile, '/admin/') !== false && $_SESSION['role'] !== 'admin') {
+if (strpos($currentFile, '/admin/') !== false && $_SESSION['user_role'] !== 'admin') {
     header("Location: " . BASE_URL . "auth/login.php?unauthorized=1");
     exit;
 }
 
-if (strpos($currentFile, '/agent/') !== false && $_SESSION['role'] !== 'agent') {
+if (strpos($currentFile, '/agent/') !== false && $_SESSION['user_role'] !== 'agent') {
     header("Location: " . BASE_URL . "auth/login.php?unauthorized=1");
     exit;
 }
