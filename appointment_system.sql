@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: Sep 04, 2025 at 10:01 PM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Host: localhost
+-- Generation Time: Sep 11, 2025 at 10:13 PM
+-- Server version: 10.4.28-MariaDB
+-- PHP Version: 8.2.4
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -38,6 +38,15 @@ CREATE TABLE `appointments` (
   `Status` enum('Pending','Completed','Missed') DEFAULT 'Pending',
   `Created_At` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `appointments`
+--
+
+INSERT INTO `appointments` (`Appointment_ID`, `Agent_ID`, `Customer_Name`, `Case_Number`, `Subject`, `Start_At`, `End_At`, `Status`, `Created_At`) VALUES
+(1, 2, 'Ali', '23487052', 'Wifi Issue', '2025-09-28 03:30:00', '2025-09-28 05:00:00', 'Pending', '2025-09-11 19:48:02'),
+(2, 2, 'Ahmad', '22786717', 'Print Issue', '2025-09-12 15:50:00', '2025-09-12 16:50:00', 'Pending', '2025-09-11 19:50:49'),
+(3, 2, 'Adam', '21346789', 'scanner issue', '2025-09-19 04:06:00', '2025-09-19 05:06:00', 'Pending', '2025-09-11 20:06:29');
 
 -- --------------------------------------------------------
 
@@ -92,7 +101,7 @@ CREATE TABLE `teams` (
 
 INSERT INTO `teams` (`Team_ID`, `Team_Name`, `Color_Code`) VALUES
 (1, 'Support Team A', '#3498db'),
-(2, 'Support Team A', '#3498db');
+(2, 'Support Team B', '#ff4013');
 
 -- --------------------------------------------------------
 
@@ -115,8 +124,8 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`User_ID`, `User_Name`, `Email`, `Role`, `Password`, `Created_At`, `Pod_ID`) VALUES
-(6, 'Agent Adam', 'agent@example.com', 'agent', 'agent123', '2025-09-04 16:42:57', 1),
-(7, 'Supervisor 1', 'admin@example.com', 'admin', 'admin123', '2025-09-04 16:48:37', NULL);
+(1, 'Admin User', 'admin@example.com', 'admin', '$2y$10$43tpt/oqN/AqvH0/4A/Pyu2FD3PLDmnzD164QO3BhYQ6O7E.FNM3W', '2025-09-04 11:57:08', NULL),
+(2, 'Agent User', 'agent@example.com', 'agent', '$2y$10$XsjpQr9a3vrYX7GKNSOlBuFbO/iwkSpKVOHtXjVG58bb0WE819Zk2', '2025-09-04 11:57:08', 1);
 
 --
 -- Indexes for dumped tables
@@ -165,7 +174,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `Appointment_ID` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `Appointment_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -189,7 +198,7 @@ ALTER TABLE `teams`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `User_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `User_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
