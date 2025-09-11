@@ -1,16 +1,13 @@
 <?php
 // --- Includes ---
-// config.php must be first to define constants like BASE_URL
 require_once __DIR__ . "/../includes/config.php";
 require_once __DIR__ . "/../includes/db_connect.php";
-
 
 // --- Session Handling ---
 if (session_status() === PHP_SESSION_NONE) {
     session_name(SESSION_NAME);
     session_start();
 }
-
 
 // If the user is already logged in, redirect them to their dashboard
 if (isset($_SESSION['user_id'])) {
@@ -19,11 +16,9 @@ if (isset($_SESSION['user_id'])) {
     exit;
 }
 
-
 // --- Initialize variables ---
 $error = "";
 $success = "";
-
 
 // --- Handle Form Submission ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -32,36 +27,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = trim($_POST['password'] ?? '');
     $role = "agent"; // All public registrations default to the 'agent' role
 
-
     // --- Validation ---
     if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL) || empty($password)) {
         $error = "Please fill all fields with valid information.";
+    } elseif (strlen($password) < 8) {
+        $error = "Password must be at least 8 characters long.";
     } else {
         // Check if email already exists
         $stmt = $mysqli->prepare("SELECT User_ID FROM users WHERE Email = ?");
-        $stmt->bind_param("s", $email);
+        $stmt->bind_param("s", email);
         $stmt->execute();
         $stmt->store_result();
-
 
         if ($stmt->num_rows > 0) {
             $error = "An account with this email address already exists.";
         } else {
             // --- Insert into Database ---
-            // ⚠️ SECURITY RISK: Storing password in plaintext as per request.
-            // In a real application, you MUST use password_hash().
-            // Example: $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
+            // SECURITY: Always hash passwords before storing them.
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
             $stmt_insert = $mysqli->prepare("INSERT INTO users (User_Name, Email, Password, Role, Created_At) VALUES (?, ?, ?, ?, NOW())");
-            // Note: The password is being stored as a simple string.
-            $stmt_insert->bind_param("ssss", $name, $email, $password, $role);
-
+            $stmt_insert->bind_param("ssss", $name, $email, $hashedPassword, $role);
 
             if ($stmt_insert->execute()) {
                 $success = "Registration successful! You can now login.";
             } else {
                 $error = "Error registering user. Please try again later.";
+                // In development, you might want to log the specific error:
+                // error_log($stmt_insert->error);
             }
             $stmt_insert->close();
         }
@@ -69,8 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-
-// --- Page Title ---
+// --- Page Setup ---
 $pageTitle = "Register";
 ?>
 <!DOCTYPE html>
@@ -79,9 +71,7 @@ $pageTitle = "Register";
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= APP_NAME ?> - <?= $pageTitle ?></title>
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <style>
         body { background-color: #f8f9fa; }
         .auth-card { max-width: 450px; }
@@ -96,8 +86,6 @@ $pageTitle = "Register";
                     <p class="text-muted">Create a New Agent Account</p>
                 </div>
 
-
-                <!-- Display success or error messages -->
                 <?php if (!empty($error)): ?>
                     <div class="alert alert-danger" role="alert"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
@@ -105,9 +93,8 @@ $pageTitle = "Register";
                     <div class="alert alert-success" role="alert"><?= htmlspecialchars($success) ?></div>
                 <?php endif; ?>
 
-
-                <?php if (empty($success)): // Hide form on success ?>
-                <form method="POST" action="register.php">
+                <?php if (empty($success)): // Hide form on success to prevent re-submission ?>
+                <form method="POST">
                     <div class="mb-3">
                         <label for="name" class="form-label">Full Name</label>
                         <input type="text" class="form-control" id="name" name="name" required>
@@ -121,7 +108,7 @@ $pageTitle = "Register";
                         <input type="password" class="form-control" id="password" name="password" required>
                     </div>
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary fw-semibold">Register</button>
+                        <button type="submit" class="btn btn-primary fw-semibold">Register Account</button>
                     </div>
                 </form>
                 <?php endif; ?>
