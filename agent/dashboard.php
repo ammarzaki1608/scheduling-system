@@ -47,10 +47,8 @@ $todays_appointments = $stmt_today->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt_today->close();
 
 
-// --- Page Title ---
+// --- Page Setup ---
 $pageTitle = "Agent Dashboard";
-
-// --- Include Header ---
 include __DIR__ . "/../includes/header.php";
 ?>
 
@@ -64,28 +62,28 @@ include __DIR__ . "/../includes/header.php";
 <div class="row">
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body text-center">
+            <div class="card-body text-center p-4">
                 <i class="bi bi-calendar-event fs-1 text-primary"></i>
                 <h5 class="card-title mt-3">Upcoming Appointments</h5>
-                <p class="card-text fs-2 fw-bold"><?= $upcoming ?></p>
+                <p class="card-text display-6 fw-bold"><?= $upcoming ?></p>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body text-center">
+            <div class="card-body text-center p-4">
                 <i class="bi bi-check2-circle fs-1 text-success"></i>
                 <h5 class="card-title mt-3">Completed</h5>
-                <p class="card-text fs-2 fw-bold"><?= $completed ?></p>
+                <p class="card-text display-6 fw-bold"><?= $completed ?></p>
             </div>
         </div>
     </div>
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm rounded-4 h-100">
-            <div class="card-body text-center">
+            <div class="card-body text-center p-4">
                 <i class="bi bi-calendar-x fs-1 text-danger"></i>
                 <h5 class="card-title mt-3">Missed</h5>
-                <p class="card-text fs-2 fw-bold"><?= $missed ?></p>
+                <p class="card-text display-6 fw-bold"><?= $missed ?></p>
             </div>
         </div>
     </div>
@@ -99,12 +97,14 @@ include __DIR__ . "/../includes/header.php";
     <div class="card-body">
         <?php if (empty($todays_appointments)): ?>
             <div class="text-center text-muted p-4">
-                <p class="mb-0">You have no appointments scheduled for today.</p>
+                <i class="bi bi-cup-straw fs-1 mb-3"></i>
+                <p class="mb-0 fw-bold">All clear for today!</p>
+                <p class="small">You have no appointments scheduled.</p>
             </div>
         <?php else: ?>
             <div class="list-group list-group-flush">
                 <?php foreach ($todays_appointments as $appt): ?>
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
                         <div>
                             <strong class="d-block"><?= date('g:i A', strtotime($appt['Start_At'])) ?> - <?= date('g:i A', strtotime($appt['End_At'])) ?></strong>
                             <span class="text-muted"><?= htmlspecialchars($appt['Subject']) ?></span>
@@ -116,7 +116,7 @@ include __DIR__ . "/../includes/header.php";
                                 if ($appt['Status'] === 'Completed') $status_class = 'bg-success';
                                 if ($appt['Status'] === 'Missed') $status_class = 'bg-danger';
                             ?>
-                            <span class="badge <?= $status_class ?>"><?= htmlspecialchars($appt['Status']) ?></span>
+                            <span class="badge rounded-pill <?= $status_class ?>"><?= htmlspecialchars($appt['Status']) ?></span>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -125,4 +125,6 @@ include __DIR__ . "/../includes/header.php";
     </div>
 </div>
 
-<?php include __DIR__ . "/../includes/footer.php"; ?>
+<?php
+include __DIR__ . "/../includes/footer.php";
+?>
