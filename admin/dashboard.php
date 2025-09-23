@@ -1,16 +1,15 @@
 <?php
-// --- Includes & PHP Logic (No Changes) ---
+// --- Includes & PHP Logic ---
 require_once __DIR__ . "/../includes/config.php";
 require_once __DIR__ . "/../includes/db_connect.php";
 require_once __DIR__ . "/../includes/auth_check.php";
-// ... All PHP data fetching logic remains the same ...
 $pageTitle = "Scheduling Dashboard";
 $viewDateStr = $_GET['date'] ?? date('Y-m-d');
 $viewDate = new DateTime($viewDateStr, new DateTimeZone(TIMEZONE));
 $teams_result = $mysqli->query("SELECT Team_ID, Team_Name, Color_Code FROM Teams");
 $teamsById = [];
 if ($teams_result) { while ($team = $teams_result->fetch_assoc()) { $teamsById[$team['Team_ID']] = $team; } }
-$appointments_sql = "SELECT a.Appointment_ID, a.Customer_Name, a.Subject, a.Start_At, a.End_At, u.User_Name as Agent_Name, p.Team_ID FROM Appointments a JOIN Users u ON a.Agent_ID = u.User_ID LEFT JOIN Pods p ON u.Pod_ID = p.Pod_ID WHERE DATE(a.Start_At) = ? ORDER BY a.Start_At ASC";
+$appointments_sql = "SELECT a.Appointment_ID, a.Customer_Name, a.Case_Number, a.Subject, a.Start_At, a.End_At, u.User_Name as Agent_Name, p.Team_ID FROM Appointments a JOIN Users u ON a.Agent_ID = u.User_ID LEFT JOIN Pods p ON u.Pod_ID = p.Pod_ID WHERE DATE(a.Start_At) = ? ORDER BY a.Start_At ASC";
 $stmt = $mysqli->prepare($appointments_sql); $stmt->bind_param("s", $viewDateStr); $stmt->execute();
 $appointments_result = $stmt->get_result(); $all_appointments = $appointments_result->fetch_all(MYSQLI_ASSOC); $stmt->close();
 $appointmentsByHour = []; $appointmentsByTeam = array_fill_keys(array_keys($teamsById), 0); $totalAppointments = count($all_appointments);
@@ -30,23 +29,17 @@ ksort($appointmentsByHour);
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
-    <!-- UPDATED: Styles for the scrollable timeline -->
     <style>
-        .schedule-card .card-body {
-            /* Let the card body adjust its height */
-            height: auto;
-        }
-        .schedule-timeline {
-            /* Make the timeline itself the scrollable container */
-            height: calc(100vh - 250px); /* Adjust height to fit screen minus header/padding */
-            overflow-y: auto;
-            padding-right: 10px; /* Add some padding for the scrollbar */
-        }
+        .schedule-timeline { height: calc(100vh - 250px); overflow-y: auto; padding-right: 10px; }
+        .department-list .badge { font-size: 0.8rem; padding: 0.5em 0.9em; border-radius: 0.5rem; font-weight: 500; }
+        .live-indicator { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; padding: 0.75rem 1rem; border-radius: 0.5rem; background-color: #f8f9fa; }
+        .live-indicator .dot { width: 8px; height: 8px; background-color: #198754; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
 <div class="container-fluid p-4">
-    <!-- Header (No Changes) -->
+    <!-- Header -->
     <header class="d-flex justify-content-between align-items-center pb-3 mb-4 border-bottom">
         <div>
             <h1 class="h4 fw-bold mb-1">Scheduling Dashboard</h1>
@@ -59,7 +52,7 @@ ksort($appointmentsByHour);
 
     <main>
         <div class="row g-4">
-            <!-- Left Column: Overview (No Changes) -->
+            <!-- Left Column: Overview -->
             <div class="col-lg-4">
                 <div class="card h-100">
                     <div class="card-body p-4">
@@ -95,7 +88,6 @@ ksort($appointmentsByHour);
                 <div class="card">
                      <div class="card-body p-4">
                          <h5 class="card-title fw-bold mb-3">Today's Schedule</h5>
-                         <!-- UPDATED: ID is now on the timeline container -->
                          <div class="schedule-timeline" id="schedule-scroll-container">
                             <?php for ($hour = 8; $hour < 18; $hour++): ?>
                                 <div class="time-slot py-3 border-top">
@@ -109,9 +101,10 @@ ksort($appointmentsByHour);
                                             ?>
                                             <div class="d-flex align-items-start" style="border-left: 3px solid <?= htmlspecialchars($team_color) ?>; padding-left: 1rem;">
                                                 <div class="flex-grow-1">
+                                                    <!-- THIS IS THE CORRECTED BLOCK OF CODE -->
                                                     <p class="fw-bold mb-1"><?= htmlspecialchars($appointment['Subject']) ?></p>
                                                     <p class="text-muted small mb-1"><i class="bi bi-person me-2"></i><?= htmlspecialchars($appointment['Agent_Name']) ?></p>
-                                                    <p class="text-muted small mb-0"><i class="bi bi-building me-2"></i><?= htmlspecialchars($appointment['Customer_Name']) ?></p>
+                                                    <p class="text-muted small mb-0"><i class="bi bi-hash me-2"></i><?= htmlspecialchars($appointment['Case_Number'] ?: 'N/A') ?></p>
                                                 </div>
                                                 <div class="text-end text-muted small fw-500">
                                                     <?= date('g:i A', strtotime($appointment['Start_At'])) ?>
@@ -130,60 +123,45 @@ ksort($appointmentsByHour);
     </main>
 </div>
 
-<!-- JavaScript Section (UPDATED) -->
+<!-- JavaScript Section -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const scrollContainer = document.getElementById('schedule-scroll-container');
     if (!scrollContainer) return;
 
-    // --- Configuration ---
-    const scrollSpeed = 1; // Pixels per interval. Lower is slower.
-    const resumeDelay = 2000; // 2 seconds delay before resuming.
-
-    // --- State Variables ---
+    const scrollSpeed = 1;
+    const resumeDelay = 2000;
     let scrollInterval;
     let resumeTimeout;
 
-    // This function handles the scrolling animation
     function autoScroll() {
         scrollContainer.scrollTop += scrollSpeed;
-        // If we've reached the bottom, loop back to the top
         if (scrollContainer.scrollTop + scrollContainer.clientHeight >= scrollContainer.scrollHeight) {
             scrollContainer.scrollTop = 0;
         }
     }
 
-    // This function starts the continuous scroll
     function startScrolling() {
-        // Clear any pending timers to avoid conflicts
         clearInterval(scrollInterval);
         clearTimeout(resumeTimeout);
-
-        // Only start if the content is actually taller than the container
         if (scrollContainer.scrollHeight > scrollContainer.clientHeight) {
-            scrollInterval = setInterval(autoScroll, 20); // Adjust interval for smoothness
+            scrollInterval = setInterval(autoScroll, 20);
         }
     }
 
-    // This function stops the scroll and sets a timer to resume
     function stopAndResumeScrolling() {
-        clearInterval(scrollInterval); // Stop the current scroll
-        clearTimeout(resumeTimeout);   // Clear any previous resume timer
-        
-        // Set a new timer to restart the scrolling after the delay
+        clearInterval(scrollInterval);
+        clearTimeout(resumeTimeout);
         resumeTimeout = setTimeout(() => {
-            // When resuming, we reset to the top for a fresh loop
             scrollContainer.scrollTop = 0;
             startScrolling();
         }, resumeDelay);
     }
 
-    // --- Event Listeners to stop auto-scroll on user interaction ---
     scrollContainer.addEventListener('wheel', stopAndResumeScrolling);
     scrollContainer.addEventListener('mousedown', stopAndResumeScrolling);
     scrollContainer.addEventListener('touchstart', stopAndResumeScrolling);
 
-    // Start the auto-scroll when the page loads
     startScrolling();
 });
 </script>
