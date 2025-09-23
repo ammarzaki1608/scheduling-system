@@ -10,9 +10,13 @@ if (!isset($_SESSION['user_role']) || $_SESSION['user_role'] !== 'admin') {
     exit;
 }
 
-// --- All the existing PHP logic for handling forms and fetching data remains here ---
-$errors = []; $success = "";
+// --- Initialize variables ---
+$errors = [];
+$success = "";
+
+// --- Handle Form Submissions (Create/Update) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    
     $agent_id = filter_input(INPUT_POST, 'agent_id', FILTER_VALIDATE_INT);
     $customer_name = trim($_POST['customer_name'] ?? '');
     $case_number = trim($_POST['case_number'] ?? '');
@@ -20,26 +24,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $start_at = trim($_POST['start_at'] ?? '');
     $end_at = trim($_POST['end_at'] ?? '');
     $status = trim($_POST['status'] ?? 'Pending');
+    $notes = trim($_POST['notes'] ?? '');
     $appointment_id = filter_input(INPUT_POST, 'appointment_id', FILTER_VALIDATE_INT);
+
+    // --- Validation ---
     if (empty($agent_id)) $errors[] = "An agent must be selected.";
     if (empty($customer_name)) $errors[] = "Customer Name is required.";
     if (empty($subject)) $errors[] = "Subject is required.";
     if (empty($start_at) || empty($end_at)) $errors[] = "Both start and end times are required.";
     if (strtotime($end_at) <= strtotime($start_at)) $errors[] = "End time must be after the start time.";
+
     if (empty($errors)) {
         if ($_POST['action'] === 'edit_appointment' && $appointment_id) {
-            $stmt = $mysqli->prepare("UPDATE Appointments SET Agent_ID=?, Customer_Name=?, Case_Number=?, Subject=?, Start_At=?, End_At=?, Status=? WHERE Appointment_ID=?");
-            $stmt->bind_param("issssssi", $agent_id, $customer_name, $case_number, $subject, $start_at, $end_at, $status, $appointment_id);
+            $stmt = $mysqli->prepare("UPDATE Appointments SET Agent_ID=?, Customer_Name=?, Case_Number=?, Subject=?, Start_At=?, End_At=?, Status=?, Notes=? WHERE Appointment_ID=?");
+            $stmt->bind_param("isssssssi", $agent_id, $customer_name, $case_number, $subject, $start_at, $end_at, $status, $notes, $appointment_id);
             if ($stmt->execute()) { $success = "Appointment updated successfully!"; } else { $errors[] = "Failed to update appointment."; }
             $stmt->close();
-        } elseif ($_POST['action'] === 'add_appointment') {
-            $stmt = $mysqli->prepare("INSERT INTO Appointments (Agent_ID, Customer_Name, Case_Number, Subject, Start_At, End_At, Status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("issssss", $agent_id, $customer_name, $case_number, $subject, $start_at, $end_at, $status);
+        } 
+        elseif ($_POST['action'] === 'add_appointment') {
+            $stmt = $mysqli->prepare("INSERT INTO Appointments (Agent_ID, Customer_Name, Case_Number, Subject, Start_At, End_At, Status, Notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isssssss", $agent_id, $customer_name, $case_number, $subject, $start_at, $end_at, $status, $notes);
             if ($stmt->execute()) { $success = "Appointment created successfully!"; } else { $errors[] = "Failed to create appointment."; }
             $stmt->close();
         }
     }
 }
+
+// --- Handle Delete Request ---
 if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])) {
     $appointment_id_to_delete = (int)$_GET['id'];
     $stmt = $mysqli->prepare("DELETE FROM Appointments WHERE Appointment_ID = ?");
@@ -48,6 +59,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && isset($_GET['id'])
     header("Location: " . BASE_URL . "admin/appointments.php?deleted=1"); exit;
 }
 if(isset($_GET['deleted'])) $success = "Appointment deleted successfully.";
+
+// --- Fetch Data for Display ---
 $agents = $mysqli->query("SELECT User_ID, User_Name FROM Users WHERE Role = 'agent' ORDER BY User_Name ASC")->fetch_all(MYSQLI_ASSOC);
 $appointments_sql = "SELECT a.*, u.User_Name as Agent_Name FROM Appointments a JOIN Users u ON a.Agent_ID = u.User_ID ORDER BY a.Start_At DESC";
 $appointments = $mysqli->query($appointments_sql)->fetch_all(MYSQLI_ASSOC);
@@ -69,14 +82,49 @@ include __DIR__ . "/../includes/header.php";
                 <div class="modal-body">
                     <input type="hidden" name="action" id="formAction" value="add_appointment">
                     <input type="hidden" name="appointment_id" id="appointmentId" value="">
+                    
                     <div class="row g-3">
-                        <div class="col-md-6"><label for="agentSelect" class="form-label">Assign to Agent</label><select class="form-select" id="agentSelect" name="agent_id" required><option value="">-- Select an Agent --</option><?php foreach ($agents as $agent): ?><option value="<?= $agent['User_ID'] ?>"><?= htmlspecialchars($agent['User_Name']) ?></option><?php endforeach; ?></select></div>
-                        <div class="col-md-6"><label for="customerName" class="form-label">Customer Name</label><input type="text" class="form-control" id="customerName" name="customer_name" required></div>
-                        <div class="col-md-6"><label for="caseNumber" class="form-label">Case Number (Optional)</label><input type="text" class="form-control" id="caseNumber" name="case_number"></div>
-                        <div class="col-md-6"><label for="statusSelect" class="form-label">Status</label><select class="form-select" id="statusSelect" name="status" required><option value="Pending">Pending</option><option value="Completed">Completed</option><option value="Missed">Missed</option></select></div>
-                        <div class="col-12"><label for="subject" class="form-label">Subject</label><input type="text" class="form-control" id="subject" name="subject" required></div>
-                        <div class="col-md-6"><label for="startAt" class="form-label">Start Time</label><input type="datetime-local" class="form-control" id="startAt" name="start_at" required></div>
-                        <div class="col-md-6"><label for="endAt" class="form-label">End Time</label><input type="datetime-local" class="form-control" id="endAt" name="end_at" required></div>
+                        <div class="col-md-6">
+                            <label for="agentSelect" class="form-label">Assign to Agent</label>
+                            <select class="form-select" id="agentSelect" name="agent_id" required>
+                                <option value="">-- Select an Agent --</option>
+                                <?php foreach ($agents as $agent): ?>
+                                    <option value="<?= $agent['User_ID'] ?>"><?= htmlspecialchars($agent['User_Name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="customerName" class="form-label">Customer Name</label>
+                            <input type="text" class="form-control" id="customerName" name="customer_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="caseNumber" class="form-label">Case Number (Optional)</label>
+                            <input type="text" class="form-control" id="caseNumber" name="case_number">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="statusSelect" class="form-label">Status</label>
+                            <select class="form-select" id="statusSelect" name="status" required>
+                                <option value="Pending">Pending</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Missed">Missed</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="startAt" class="form-label">Start Time</label>
+                            <input type="text" class="form-control" id="startAt" name="start_at" required placeholder="Select date and time...">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="endAt" class="form-label">End Time</label>
+                            <input type="text" class="form-control" id="endAt" name="end_at" required placeholder="Select date and time...">
+                        </div>
+                        <div class="col-12">
+                            <label for="notes" class="form-label">Appointment Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -133,12 +181,7 @@ include __DIR__ . "/../includes/header.php";
                                     <small class="d-block text-muted"><?= date('g:i A', strtotime($appt['Start_At'])) ?> - <?= date('g:i A', strtotime($appt['End_At'])) ?></small>
                                 </td>
                                 <td>
-                                    <?php 
-                                        $status = htmlspecialchars($appt['Status']);
-                                        $status_class = 'bg-secondary';
-                                        if ($status === 'Completed') $status_class = 'bg-success';
-                                        if ($status === 'Missed') $status_class = 'bg-danger';
-                                    ?>
+                                    <?php $status = htmlspecialchars($appt['Status']); $status_class = 'bg-secondary'; if ($status === 'Completed') $status_class = 'bg-success'; if ($status === 'Missed') $status_class = 'bg-danger'; ?>
                                     <span class="badge rounded-pill <?= $status_class ?>"><?= $status ?></span>
                                 </td>
                                 <td class="text-end">
@@ -161,6 +204,10 @@ include __DIR__ . "/../includes/header.php";
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const config = { enableTime: true, dateFormat: "Y-m-d H:i", time_24hr: true, altInput: true, altFormat: "M j, Y at h:i K" };
+    const startPicker = flatpickr("#startAt", config);
+    const endPicker = flatpickr("#endAt", config);
+    
     const appointmentModal = document.getElementById('appointmentModal');
     const modalTitle = document.getElementById('appointmentModalLabel');
     const formAction = document.getElementById('formAction');
@@ -169,9 +216,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const customerNameInput = document.getElementById('customerName');
     const caseNumberInput = document.getElementById('caseNumber');
     const subjectInput = document.getElementById('subject');
-    const startAtInput = document.getElementById('startAt');
-    const endAtInput = document.getElementById('endAt');
     const statusSelect = document.getElementById('statusSelect');
+    const notesInput = document.getElementById('notes');
 
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', function () {
@@ -183,9 +229,10 @@ document.addEventListener('DOMContentLoaded', function () {
             customerNameInput.value = apptData.Customer_Name;
             caseNumberInput.value = apptData.Case_Number;
             subjectInput.value = apptData.Subject;
-            startAtInput.value = apptData.Start_At.slice(0, 16);
-            endAtInput.value = apptData.End_At.slice(0, 16);
             statusSelect.value = apptData.Status;
+            notesInput.value = apptData.Notes || '';
+            startPicker.setDate(apptData.Start_At);
+            endPicker.setDate(apptData.End_At);
         });
     });
 
@@ -194,6 +241,8 @@ document.addEventListener('DOMContentLoaded', function () {
         formAction.value = 'add_appointment';
         document.querySelector('#appointmentModal form').reset();
         appointmentIdInput.value = '';
+        startPicker.clear();
+        endPicker.clear();
     });
 });
 </script>

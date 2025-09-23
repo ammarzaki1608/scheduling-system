@@ -24,14 +24,18 @@ function is_nav_active($link_file_name) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
-    <!-- Our New Master Stylesheet -->
+    <!-- Flatpickr CSS for the date/time picker -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/airbnb.css">
+    
+    <!-- Our Master Stylesheet -->
     <link rel="stylesheet" href="<?= BASE_URL ?>assets/css/style.css">
 </head>
 <body>
 
 <div class="page-wrapper">
-    <!-- Redesigned Sidebar -->
-    <nav class="sidebar p-3 d-flex flex-column">
+    <!-- Sidebar -->
+    <nav class="sidebar p-3">
         <div class="text-center mb-4">
              <a class="sidebar-brand d-flex align-items-center justify-content-center text-decoration-none" href="#">
                  <i class="bi bi-calendar-check-fill fs-2 text-primary"></i>
@@ -39,7 +43,6 @@ function is_nav_active($link_file_name) {
              </a>
         </div>
         
-        <!-- Dynamic Navigation Area (uses the same partials) -->
         <?php
         if (isset($_SESSION['user_role'])) {
             $nav_file = __DIR__ . "/partials/_" . $_SESSION['user_role'] . "_nav.php";
@@ -54,7 +57,7 @@ function is_nav_active($link_file_name) {
         </div>
     </nav>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Wrapper -->
     <div class="content-wrapper">
         <header class="top-header p-3 d-flex justify-content-end align-items-center">
              <span class="navbar-text">Welcome, <strong><?= htmlspecialchars($_SESSION['user_name'] ?? 'Guest') ?></strong></span>

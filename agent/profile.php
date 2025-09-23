@@ -15,7 +15,7 @@ $errors = [];
 $success = "";
 $agentId = (int) $_SESSION['user_id'];
 
-// Fetch current user data
+// Fetch current user data to display in the form
 $stmt = $mysqli->prepare("SELECT User_Name, Email, Password FROM Users WHERE User_ID = ?");
 $stmt->bind_param("i", $agentId);
 $stmt->execute();
@@ -33,20 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($name) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = "Please provide a valid name and email address.";
         } else {
-            // Check if email is already used by another user
+            // Check if email is already used by ANOTHER user
             $stmt_check = $mysqli->prepare("SELECT User_ID FROM Users WHERE Email = ? AND User_ID != ?");
             $stmt_check->bind_param("si", $email, $agentId);
             $stmt_check->execute();
             if ($stmt_check->get_result()->num_rows > 0) {
-                $errors[] = "This email address is already in use.";
+                $errors[] = "This email address is already in use by another account.";
             } else {
                 $stmt_update = $mysqli->prepare("UPDATE Users SET User_Name = ?, Email = ? WHERE User_ID = ?");
                 $stmt_update->bind_param("ssi", $name, $email, $agentId);
                 if ($stmt_update->execute()) {
-                    // Update session variable as well
+                    // Update the session variable so the name change is reflected immediately
                     $_SESSION['user_name'] = $name;
                     $success = "Profile updated successfully!";
-                    // Re-fetch user data to display updated info
+                    // Re-fetch user data to display the updated info on the page
                     $user['User_Name'] = $name;
                     $user['Email'] = $email;
                 } else {
@@ -106,10 +106,10 @@ include __DIR__ . "/../includes/header.php";
 <?php endif; ?>
 
 
-<div class="row">
+<div class="row g-4">
     <!-- Profile Details Column -->
     <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4">
+        <div class="card">
             <div class="card-body p-4">
                 <h5 class="card-title fw-bold mb-4">Profile Information</h5>
                 <form method="post">
@@ -131,22 +131,37 @@ include __DIR__ . "/../includes/header.php";
     </div>
     <!-- Change Password Column -->
     <div class="col-lg-6">
-        <div class="card border-0 shadow-sm rounded-4">
+        <div class="card">
             <div class="card-body p-4">
                 <h5 class="card-title fw-bold mb-4">Change Password</h5>
                 <form method="post">
                     <input type="hidden" name="action" value="change_password">
                     <div class="mb-3">
                         <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="currentPassword" name="current_password" required>
+                            <span class="input-group-text" id="toggleCurrentPassword" style="cursor: pointer;">
+                                <i class="bi bi-eye-slash-fill"></i>
+                            </span>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="newPassword" class="form-label">New Password</label>
-                        <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                         <div class="input-group">
+                            <input type="password" class="form-control" id="newPassword" name="new_password" required>
+                            <span class="input-group-text" id="toggleNewPassword" style="cursor: pointer;">
+                                <i class="bi bi-eye-slash-fill"></i>
+                            </span>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                        <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                         <div class="input-group">
+                            <input type="password" class="form-control" id="confirmPassword" name="confirm_password" required>
+                            <span class="input-group-text" id="toggleConfirmPassword" style="cursor: pointer;">
+                                <i class="bi bi-eye-slash-fill"></i>
+                            </span>
+                        </div>
                     </div>
                      <div class="text-end">
                         <button type="submit" class="btn btn-primary">Change Password</button>
@@ -157,6 +172,32 @@ include __DIR__ . "/../includes/header.php";
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function togglePasswordVisibility(inputId, toggleId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleIcon = document.getElementById(toggleId).querySelector('i');
+
+        if (passwordInput && toggleIcon) {
+            document.getElementById(toggleId).addEventListener('click', function() {
+                // Toggle the type attribute
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // Toggle the icon
+                toggleIcon.classList.toggle('bi-eye-slash-fill');
+                toggleIcon.classList.toggle('bi-eye-fill');
+            });
+        }
+    }
+
+    togglePasswordVisibility('currentPassword', 'toggleCurrentPassword');
+    togglePasswordVisibility('newPassword', 'toggleNewPassword');
+    togglePasswordVisibility('confirmPassword', 'toggleConfirmPassword');
+});
+</script>
+
 <?php
 include __DIR__ . "/../includes/footer.php";
 ?>
+
